@@ -1,5 +1,5 @@
 """
-DeadToons Python Site — Flask on Vercel
+DeadToons Flask Site — Vercel
 Backend: Cloudflare Worker (unlock + image proxy)
 """
 import os
@@ -16,13 +16,14 @@ app = Flask(__name__)
 API    = "https://api.deadbase.host/api/v1/public"
 SITE   = "https://deadtoons.sbs"
 
-# 👇👇👇 REPLACE THIS WITH YOUR WORKER URL 👇👇👇
-WORKER = os.environ.get("WORKER_URL", "https://YOUR-WORKER-URL.workers.dev")
+# 👇👇👇 APNA WORKER URL YAHAN DAAL 👇👇👇
+WORKER = os.environ.get("WORKER_URL", "https://dt-worker.aakigopro1470.workers.dev")
 
-UA     = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-          "AppleWebKit/537.36 (KHTML, like Gecko) "
-          "Chrome/137.0.0.0 Safari/537.36")
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+      "AppleWebKit/537.36 (KHTML, like Gecko) "
+      "Chrome/137.0.0.0 Safari/537.36")
 HEADERS = {"User-Agent": UA}
+
 
 # ─── CSS ─────────────────────────────────────────────────
 CSS = """
@@ -85,6 +86,8 @@ footer{text-align:center;padding:2rem 1rem;color:var(--muted);
 font-size:.75rem;border-top:1px solid var(--border);margin-top:3rem}
 """
 
+
+# ─── HTML SHELL ──────────────────────────────────────────
 def shell(title, body, extra_js=""):
     return f"""<!DOCTYPE html>
 <html lang="en"><head>
@@ -108,16 +111,20 @@ const WORKER = "{WORKER}";
 </script>
 </body></html>"""
 
+
+# ─── HELPERS ─────────────────────────────────────────────
 def img_url(raw):
     if not raw:
         return ""
     return f"{WORKER}/img?u={quote(raw, safe='')}"
+
 
 def fetch_posts(page=1, limit=24):
     r = requests.get(f"{API}/posts", params={"page": page, "limit": limit},
                      headers=HEADERS, timeout=15)
     r.raise_for_status()
     return r.json()
+
 
 def card_html(p):
     img = img_url(p.get("backdrop_img", {}).get("mid") or
@@ -134,6 +141,8 @@ def card_html(p):
       </div>
     </a>"""
 
+
+# ─── ROUTES ──────────────────────────────────────────────
 @app.route("/")
 def home():
     try:
@@ -155,6 +164,7 @@ def home():
     <span>of {total_pages}</span>{next_link}</div>
     """
     return shell("Home", body)
+
 
 @app.route("/search")
 def search():
@@ -180,6 +190,7 @@ def search():
     cards = "".join(card_html(p) for p in results)
     body = f'<h1>Search: "{q}" — {len(results)} results</h1><div class="grid">{cards}</div>'
     return shell(f"Search {q}", body)
+
 
 @app.route("/anime/<slug>")
 def anime_detail(slug):
@@ -302,6 +313,7 @@ window.addEventListener('DOMContentLoaded', () => {{
     """
     return shell(title, body, extra_js)
 
+
 @app.route("/api/episode")
 def api_episode():
     slug    = request.args.get("slug", "")
@@ -318,9 +330,11 @@ def api_episode():
     except Exception as e:
         return jsonify({"links": [], "error": str(e)})
 
+
 @app.route("/health")
 def health():
     return jsonify({"ok": True, "worker": WORKER})
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
